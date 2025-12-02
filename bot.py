@@ -1,5 +1,6 @@
 import pandas as pd
-from telegram import Bot, ParseMode
+from telegram import Bot
+from telegram.constants import ParseMode  # ← ИЗМЕНИЛОСЬ ЗДЕСЬ!
 from datetime import datetime
 import os
 import sys
@@ -19,7 +20,7 @@ def send_telegram_notification(message):
         bot.send_message(
             chat_id=MY_CHAT_ID,
             text=message,
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML  # ← ParseMode теперь отсюда
         )
         return True
     except Exception as e:
