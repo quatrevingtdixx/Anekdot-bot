@@ -2,47 +2,63 @@ name: Post Anekdot
 
 on:
   schedule:
-    # 3 раза в день по UTC (10:00, 15:00, 20:00 по Москве)
-    - cron: '0 7 * * *'   # 10:00 МСК
-    - cron: '0 12 * * *'  # 15:00 МСК  
-    - cron: '0 17 * * *'  # 20:00 МСК
-  workflow_dispatch:
+    # ============================================
+    # РАСПИСАНИЕ ПУБЛИКАЦИЙ
+    # UTC время (Москва = UTC+3)
+    # ============================================
+    
+    # БУДНИ (понедельник-пятница)
+    # 08:00 МСК = 05:00 UTC
+    - cron: '0 5 * * 1-5'
+    
+    # 13:00 МСК = 10:00 UTC  
+    - cron: '0 10 * * 1-5'
+    
+    # 21:00 МСК = 18:00 UTC
+    - cron: '0 18 * * 1-5'
+    
+    # ВЫХОДНЫЕ (суббота-воскресенье)
+    # 10:00 МСК = 07:00 UTC
+    - cron: '0 7 * * 0,6'
+    
+    # 14:00 МСК = 11:00 UTC
+    - cron: '0 11 * * 0,6'
+    
+    # 20:00 МСК = 17:00 UTC
+    - cron: '0 17 * * 0,6'
+    
+    # ============================================
+    # ДЛЯ ТЕСТА (раскомментируй если нужно)
+    # - cron: '*/30 * * * *'  # Каждые 30 минут
+    # ============================================
+    
+  workflow_dispatch:  # Разрешить ручной запуск
 
 jobs:
   post:
     runs-on: ubuntu-latest
     
     steps:
+    # 1. Скачиваем код
     - name: Checkout code
       uses: actions/checkout@v3
     
+    # 2. Устанавливаем Python
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
+    # 3. Устанавливаем зависимости
     - name: Install dependencies
       run: |
-        # Устанавливаем конкретные версии для стабильности
-        pip install python-telegram-bot==20.7
-        pip install pandas==2.1.4
+        pip install python-telegram-bot pandas
+        echo "✅ Зависимости установлены"
     
-    - name: Run bot
+    # 4. Запускаем бота
+    - name: Run Telegram Bot
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}
       run: python bot.py
-    
-    # Опционально: шаг для уведомлений (если бот завершился с ошибкой)
-    - name: Send notification on failure
-      if: failure()
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.rest.actions.createWorkflowDispatch({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            workflow_id: 'post-anekdot.yml',
-            ref: 'main'
-          })
