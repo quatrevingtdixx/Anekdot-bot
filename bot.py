@@ -66,32 +66,27 @@ async def post_anekdot():
                 if joke_text:
                     print(f"📤 Публикую анекдот #{i+1}...")
                     
-                    # ИСПРАВЛЯЕМ АБЗАЦЫ ДЛЯ TELEGRAM
-                    # Заменяем двойные пробелы на переносы строк
-                    formatted_joke = joke_text.replace('  ', '\n\n')
-                    # Также заменяем одинарные переносы на двойные для абзацев
-                    formatted_joke = formatted_joke.replace('\n', '\n\n')
-                    # Убираем лишние переносы в начале и конце
-                    formatted_joke = formatted_joke.strip()
+                    # Заменяем \n на реальные переносы строк
+                    joke_text = joke_text.replace('\\n', '\n')
                     
-                    print(f"📝 Текст перед отправкой: {formatted_joke[:50]}...")
+                    print(f"📝 Текст: {joke_text[:50]}...")
                     
                     # Отправляем в Telegram
                     bot = Bot(token=BOT_TOKEN)
-                    await bot.send_message(chat_id=CHANNEL_ID, text=formatted_joke)
+                    await bot.send_message(chat_id=CHANNEL_ID, text=joke_text)
                     
                     # Обновляем файл - помечаем как опубликованный
-                    lines = []
+                    updated_lines = []
                     for line in joke_block.strip().split('\n'):
                         if line.startswith('Опубликован:'):
-                            lines.append('Опубликован: Да')
+                            updated_lines.append('Опубликован: Да')
                         elif line.startswith('Дата:'):
                             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            lines.append(f'Дата: {current_time}')
+                            updated_lines.append(f'Дата: {current_time}')
                         else:
-                            lines.append(line)
+                            updated_lines.append(line)
                     
-                    jokes[i] = '\n'.join(lines)
+                    jokes[i] = '\n'.join(updated_lines)
                     
                     # Сохраняем обновленный файл
                     with open('anekdots.txt', 'w', encoding='utf-8') as f:
