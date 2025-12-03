@@ -1,42 +1,100 @@
-name: Post Anekdot
-
-on:
-  schedule:
-    # БУДНИ (пн-пт): 08:00, 13:00, 20:00 МСК
-    - cron: '0 5 * * 1-5'   # 05:00 UTC = 08:00 МСК
-    - cron: '0 10 * * 1-5'  # 10:00 UTC = 13:00 МСК
-    - cron: '0 17 * * 1-5'  # 17:00 UTC = 20:00 МСК
-    
-    # ВЫХОДНЫЕ (сб-вс): 10:00, 14:00, 21:00 МСК
-    - cron: '0 7 * * 0,6'   # 07:00 UTC = 10:00 МСК
-    - cron: '0 11 * * 0,6'  # 11:00 UTC = 14:00 МСК
-    - cron: '0 18 * * 0,6'  # 18:00 UTC = 21:00 МСК
-    
-  workflow_dispatch:
-
-jobs:
-  post:
-    runs-on: ubuntu-latest
-    
-    steps:
-    # 1. Скачиваем код
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    # 2. Устанавливаем Python
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    
-    # 3. Устанавливаем зависимости
-    - name: Install dependencies
-      run: pip install python-telegram-bot pandas
-    
-    # 4. Запускаем бота (ЗДЕСЬ ПЕРЕДАЕМ СЕКРЕТЫ!)
-    - name: Run Telegram Bot
-      env:
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}           # ← ИЗ СЕКРЕТОВ
-        CHANNEL_ID: ${{ secrets.CHANNEL_ID }}         # ← ИЗ СЕКРЕТОВ
-        MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}         # ← ИЗ СЕКРЕТОВ
-      run: python bot.py
+async def post_anekdot():
+    """Основная функция публикации анекдота - публикует ТОЛЬКО ОДИН анекдот за запуск"""
+    try:
+        print("📖 Читаю файл с анекдотами...")
+        
+        # Проверяем существование файла
+        if not os.path.exists('anekdots.csv'):
+            print("❌ Файл anekdots.csv не найден!")
+            if MY_CHAT_ID and BOT_TOKEN:
+                await send_telegram_notification("❌ ОШИБКА: Файл anekdots.csv не найден!")
+            return False, "Файл не найден"
+        
+        # Читаем CSV, сохраняя переносы строк
+        df = pd.read_csv('anekdots.csv', dtype=str, keep_default_na=False)
+        
+        # Статистика ДО публикации
+        total = len(df)
+        published_before = df['Опубликован?'].eq('Да').sum()
+        remaining_before = total - published_before
+        
+        print(f"📊 Статистика: Всего анекдотов: {total}, Опубликовано: {published_before}, Осталось: {remaining_before}")
+        
+        # Если все анекдоты уже опубликованы
+        if remaining_before == 0:
+            print("🎉 Все анекдоты уже опубликованы!")
+            if MY_CHAT_ID and BOT_TOKEN:
+                await send_telegram_notification(
+                    "🎉 ВСЕ АНЕКДОТЫ УЖЕ ОПУБЛИКОВАНЫ!\n\n"
+                    f"Всего анекдотов: {total}\n"
+                    "Добавь новые анекдоты в файл anekdots.csv\n"
+                    "или удали отметки 'Да' из столбца 'Опубликован?'"
+                )
+            return True, "Все анекдоты уже опубликованы"
+        
+        # ПРЕДУПРЕЖДЕНИЕ: НЕ ПУБЛИКУЕМ СРАЗУ ВСЕ АНЕКДОТЫ!
+        # Находим ПЕРВЫЙ неопубликованный анекдот
+        for i, row in df.iterrows():
+            if row.get('Опубликован?', '').strip() != 'Да':
+                joke = str(row['Текст анекдота']).strip()
+                
+                if not joke or joke.lower() == 'nan':
+                    continue
+                
+                # Публикуем ТОЛЬКО ЭТОТ анекдот
+                print(f"📤 Публикую анекдот #{i+1}...")
+                bot = Bot(token=BOT_TOKEN)
+                
+                # Отправляем анекдот в канал
+                await bot.send_message(chat_id=CHANNEL_ID, text=joke)
+                
+                # Обновляем CSV - отмечаем ТОЛЬКО ЭТОТ анекдот
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                df.at[i, 'Опубликован?'] = 'Да'
+                df.at[i, 'Дата публикации'] = current_time
+                df.to_csv('anekdots.csv', index=False, encoding='utf-8')
+                
+                # Статистика ПОСЛЕ публикации
+                published_after = df['Опубликован?'].eq('Да').sum()
+                remaining_after = total - published_after
+                
+                # Логируем
+                joke_preview = joke.replace('\n', ' ')[:80]
+                print(f"✅ Опубликован анекдот #{i+1}")
+                print(f"   Текст: {joke_preview}...")
+                print(f"   Время публикации: {current_time}")
+                print(f"   Осталось анекдотов: {remaining_after}")
+                
+                # Отправляем уведомление если мало осталось
+                if 1 <= remaining_after <= 3 and MY_CHAT_ID and BOT_TOKEN:
+                    await send_telegram_notification(
+                        f"📤 Опубликован анекдот #{i+1}\n"
+                        f"📅 {current_time}\n"
+                        f"⚠️ Осталось всего {remaining_after} анекдотов!"
+                    )
+                elif MY_CHAT_ID and BOT_TOKEN:
+                    await send_telegram_notification(
+                        f"📤 Опубликован анекдот #{i+1}\n"
+                        f"📅 {current_time}\n"
+                        f"📊 Осталось: {remaining_after}/{total}"
+                    )
+                
+                return True, f"Опубликован анекдот #{i+1}"
+        
+        # Если дошли сюда, значит все анекдоты уже опубликованы
+        # (это запасной вариант)
+        print("ℹ️ Все анекдоты уже отмечены как опубликованные")
+        return True, "Все анекдоты уже опубликованы"
+        
+    except KeyError as e:
+        error_msg = f"❌ Ошибка в CSV: нет столбца {e}"
+        print(error_msg)
+        if MY_CHAT_ID and BOT_TOKEN:
+            await send_telegram_notification(f"❌ ОШИБКА В CSV: нет столбца {e}")
+        return False, error_msg
+    except Exception as e:
+        error_msg = f"❌ Ошибка: {type(e).__name__}: {e}"
+        print(error_msg)
+        if MY_CHAT_ID and BOT_TOKEN:
+            await send_telegram_notification(f"❌ ОШИБКА БОТА: {type(e).__name__}: {e}")
+        return False, error_msg
