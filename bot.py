@@ -35,87 +35,90 @@ async def post_anekdot():
         
         print("📖 Читаю файл с анекдотами...")
         
-        # Открываем файл с анекдотами
+        # Читаем ВЕСЬ файл
         with open('anekdots.txt', 'r', encoding='utf-8') as f:
-            content = f.read()
+            all_text = f.read()
         
-        # Делим на анекдоты
-        jokes = content.strip().split('\n\n')
+        # Разделяем на блоки анекдотов
+        blocks = all_text.strip().split('\n\n')
         
-        print(f"📊 Всего анекдотов: {len(jokes)}")
+        print(f"📊 Найдено блоков: {len(blocks)}")
         
-        # Находим первый неопубликованный анекдот
-        for i, joke_block in enumerate(jokes):
-            lines = joke_block.strip().split('\n')
+        # Ищем первый неопубликованный анекдот
+        for i in range(len(blocks)):
+            block = blocks[i]
             
-            # Проверяем, опубликован ли уже этот анекдот
-            is_published = False
+            # Проверяем есть ли "Опубликован: Да" в этом блоке
+            if 'Опубликован: Да' in block:
+                print(f"ℹ️  Блок {i+1} уже опубликован, пропускаю...")
+                continue
+            
+            # Ищем ID
+            lines = block.split('\n')
             joke_id = None
+            joke_text = None
             
             for line in lines:
-                if line.startswith('Опубликован:') and 'Да' in line:
-                    is_published = True
-                    break
-                elif line.startswith('ID:'):
+                if line.startswith('ID:'):
                     joke_id = line.replace('ID:', '').strip()
+                elif line.startswith('Текст:'):
+                    joke_text = line.replace('Текст:', '').strip()
             
-            if not is_published and joke_id:
-                # Находим текст анекдота
-                joke_text = ""
-                for line in lines:
-                    if line.startswith('Текст:'):
-                        joke_text = line.replace('Текст:', '').strip()
-                        break
+            if joke_id and joke_text:
+                print(f"🎯 Найден неопубликованный анекдот ID: {joke_id}")
                 
-                if joke_text:
-                    print(f"📤 Публикую анекдот ID: {joke_id}...")
-                    
-                    # Заменяем \n на реальные переносы строк
-                    joke_text = joke_text.replace('\\n', '\n')
-                    
-                    print(f"📝 Длина текста: {len(joke_text)} символов")
-                    
-                    # Отправляем в Telegram
-                    bot = Bot(token=BOT_TOKEN)
-                    await bot.send_message(chat_id=CHANNEL_ID, text=joke_text)
-                    
-                    # Обновляем TXT файл - помечаем как опубликованный
-                    updated_lines = []
-                    for line in joke_block.strip().split('\n'):
-                        if line.startswith('Опубликован:'):
-                            updated_lines.append('Опубликован: Да')
-                        elif line.startswith('Дата:'):
-                            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            updated_lines.append(f'Дата: {current_time}')
-                        else:
-                            updated_lines.append(line)
-                    
-                    jokes[i] = '\n'.join(updated_lines)
-                    
-                    # Сохраняем обновленный файл anekdots.txt
-                    with open('anekdots.txt', 'w', encoding='utf-8') as f:
-                        f.write('\n\n'.join(jokes))
-                    
-                    print(f"✅ Опубликован анекдот ID: {joke_id}")
-                    
-                    # Обновляем last_id.txt
-                    with open('last_id.txt', 'w', encoding='utf-8') as f:
-                        f.write(joke_id)
-                    
-                    # Считаем сколько осталось
-                    published_count = sum(1 for j in jokes if 'Опубликован: Да' in j)
-                    remaining = len(jokes) - published_count
-                    
-                    print(f"📊 Опубликовано: {published_count}, Осталось: {remaining}")
-                    print(f"💾 Обновлен last_id.txt: {joke_id}")
-                    
-                    return True
+                # Форматируем текст для Telegram
+                formatted_text = joke_text.replace('\\n', '\n')
+                print(f"📝 Длина текста: {len(formatted_text)} символов")
+                print(f"📝 Превью: {formatted_text[:50]}...")
+                
+                # Публикуем в Telegram
+                print(f"📤 Публикую анекдот ID: {joke_id}...")
+                bot = Bot(token=BOT_TOKEN)
+                await bot.send_message(chat_id=CHANNEL_ID, text=formatted_text)
+                
+                # Обновляем блок - добавляем пометку о публикации
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Создаем обновленный блок
+                new_lines = []
+                for line in lines:
+                    if line.startswith('Опубликован:'):
+                        new_lines.append('Опубликован: Да')
+                    elif line.startswith('Дата:'):
+                        new_lines.append(f'Дата: {current_time}')
+                    else:
+                        new_lines.append(line)
+                
+                blocks[i] = '\n'.join(new_lines)
+                
+                # Записываем обновленный файл
+                with open('anekdots.txt', 'w', encoding='utf-8') as f:
+                    f.write('\n\n'.join(blocks))
+                
+                print(f"✅ Анекдот ID: {joke_id} опубликован!")
+                print(f"🕐 Время публикации: {current_time}")
+                
+                # Обновляем last_id.txt
+                with open('last_id.txt', 'w', encoding='utf-8') as f:
+                    f.write(joke_id)
+                
+                print(f"💾 last_id.txt обновлен: {joke_id}")
+                
+                # Считаем статистику
+                published = sum(1 for b in blocks if 'Опубликован: Да' in b)
+                total = len(blocks)
+                
+                print(f"📊 Статистика: Опубликовано: {published}/{total}")
+                print(f"📊 Осталось: {total - published}")
+                
+                return True
         
         print("🎉 Все анекдоты уже опубликованы!")
         return True
         
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"❌ Критическая ошибка: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -125,10 +128,14 @@ async def main():
     success = await post_anekdot()
     
     if success:
-        print("✅ УСПЕШНО ЗАВЕРШЕНО")
+        print("="*50)
+        print("✅ БОТ УСПЕШНО ЗАВЕРШИЛ РАБОТУ")
+        print("="*50)
         sys.exit(0)
     else:
-        print("❌ ЗАВЕРШЕНО С ОШИБКОЙ")
+        print("="*50)
+        print("❌ БОТ ЗАВЕРШИЛСЯ С ОШИБКОЙ")
+        print("="*50)
         sys.exit(1)
 
 if __name__ == "__main__":
