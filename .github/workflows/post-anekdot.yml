@@ -2,29 +2,15 @@ name: Post Anekdot
 
 on:
   schedule:
-    # ============================================
-    # РАСПИСАНИЕ: UTC время (Москва = UTC+3)
-    # ============================================
+    # БУДНИ (пн-пт): 08:00, 13:00, 20:00 МСК
+    - cron: '0 5 * * 1-5'   # 05:00 UTC = 08:00 МСК
+    - cron: '0 10 * * 1-5'  # 10:00 UTC = 13:00 МСК
+    - cron: '0 17 * * 1-5'  # 17:00 UTC = 20:00 МСК
     
-    # БУДНИ (пн-пт)
-    # 08:00 МСК = 05:00 UTC
-    - cron: '0 5 * * 1-5'
-    
-    # 13:00 МСК = 10:00 UTC  
-    - cron: '0 10 * * 1-5'
-    
-    # 20:00 МСК = 17:00 UTC  ← ИЗМЕНИЛА 21:00 на 20:00 по твоему запросу
-    - cron: '0 17 * * 1-5'
-    
-    # ВЫХОДНЫЕ (сб-вс)
-    # 10:00 МСК = 07:00 UTC
-    - cron: '0 7 * * 0,6'
-    
-    # 14:00 МСК = 11:00 UTC
-    - cron: '0 11 * * 0,6'
-    
-    # 21:00 МСК = 18:00 UTC
-    - cron: '0 18 * * 0,6'
+    # ВЫХОДНЫЕ (сб-вс): 10:00, 14:00, 21:00 МСК
+    - cron: '0 7 * * 0,6'   # 07:00 UTC = 10:00 МСК
+    - cron: '0 11 * * 0,6'  # 11:00 UTC = 14:00 МСК
+    - cron: '0 18 * * 0,6'  # 18:00 UTC = 21:00 МСК
     
   workflow_dispatch:
 
@@ -33,20 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    # 1. Скачиваем код
     - name: Checkout code
       uses: actions/checkout@v3
     
+    # 2. Устанавливаем Python
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
+    # 3. Устанавливаем зависимости
     - name: Install dependencies
       run: pip install python-telegram-bot pandas
     
+    # 4. Запускаем бота (ЗДЕСЬ ПЕРЕДАЕМ СЕКРЕТЫ!)
     - name: Run Telegram Bot
       env:
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
-        MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}           # ← ИЗ СЕКРЕТОВ
+        CHANNEL_ID: ${{ secrets.CHANNEL_ID }}         # ← ИЗ СЕКРЕТОВ
+        MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}         # ← ИЗ СЕКРЕТОВ
       run: python bot.py
