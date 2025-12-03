@@ -1,15 +1,7 @@
 name: 🤖 Publish Anekdot
 
 on:
-  # 👇 ЭТА СТРОКА ДАЁТ КНОПКУ "RUN WORKFLOW"!
   workflow_dispatch:
-    inputs:
-      note:
-        description: 'Комментарий к запуску'
-        required: false
-        default: 'Ручной запуск'
-  
-  # Автоматический запуск каждый день в 12:00 UTC (15:00 МСК)
   schedule:
     - cron: '0 12 * * *'
 
@@ -18,47 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    # 1. Получить код из репозитория
     - name: 📥 Checkout code
       uses: actions/checkout@v4
     
-    # 2. Установить Python
     - name: 🐍 Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
-    # 3. Установить библиотеки
     - name: 📦 Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install python-telegram-bot
+      run: pip install python-telegram-bot
     
-    # 4. Запустить бота
     - name: 🤖 Run Telegram Bot
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}
-      run: |
-        echo "🚀 Запускаю Telegram бота..."
-        echo "📅 Дата: $(date '+%d.%m.%Y %H:%M МСК')"
-        python bot.py
-    
-    # 5. Сохранить изменения (если бот обновил файлы)
-    - name: 💾 Commit changes if needed
-      run: |
-        # Настроить git
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        
-        # Проверить есть ли изменения
-        if git diff --quiet; then
-          echo "✅ Нет изменений для сохранения"
-        else
-          echo "📝 Сохраняю изменения..."
-          git add .
-          git commit -m "🤖 Опубликован анекдот [автоматически]"
-          git push
-          echo "✅ Изменения сохранены!"
-        fi
+      run: python bot.py
