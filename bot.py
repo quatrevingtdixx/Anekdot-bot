@@ -66,9 +66,19 @@ async def post_anekdot():
                 if joke_text:
                     print(f"📤 Публикую анекдот #{i+1}...")
                     
+                    # ИСПРАВЛЯЕМ АБЗАЦЫ ДЛЯ TELEGRAM
+                    # Заменяем двойные пробелы на переносы строк
+                    formatted_joke = joke_text.replace('  ', '\n\n')
+                    # Также заменяем одинарные переносы на двойные для абзацев
+                    formatted_joke = formatted_joke.replace('\n', '\n\n')
+                    # Убираем лишние переносы в начале и конце
+                    formatted_joke = formatted_joke.strip()
+                    
+                    print(f"📝 Текст перед отправкой: {formatted_joke[:50]}...")
+                    
                     # Отправляем в Telegram
                     bot = Bot(token=BOT_TOKEN)
-                    await bot.send_message(chat_id=CHANNEL_ID, text=joke_text)
+                    await bot.send_message(chat_id=CHANNEL_ID, text=formatted_joke)
                     
                     # Обновляем файл - помечаем как опубликованный
                     lines = []
