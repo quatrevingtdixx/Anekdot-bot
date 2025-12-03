@@ -3,6 +3,11 @@ name: 🤖 Publish Anekdot
 on:
   # Для ручного запуска (кнопка)
   workflow_dispatch:
+    inputs:
+      note:
+        description: 'Комментарий к запуску'
+        required: false
+        default: 'Ручной запуск'
   
   # АВТОМАТИЧЕСКОЕ РАСПИСАНИЕ:
   schedule:
@@ -21,20 +26,76 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    # 1. Получить код из репозитория
     - name: 📥 Checkout code
       uses: actions/checkout@v4
+      with:
+        # Важно: забираем изменения чтобы обновлять файлы
+        fetch-depth: 0
     
+    # 2. Установить Python
     - name: 🐍 Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
+    # 3. Установить библиотеки
     - name: 📦 Install dependencies
-      run: pip install python-telegram-bot
+      run: |
+        python -m pip install --upgrade pip
+        pip install python-telegram-bot
     
+    # 4. Запустить бота
     - name: 🤖 Run Telegram Bot
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}
-      run: python bot.py
+      run: |
+        echo "🚀 Запускаю Telegram бота..."
+        echo "📅 Дата: $(date '+%d.%m.%Y %H:%M МСК')"
+        python bot.py
+    
+    # 5. Сохранить изменения если бот обновил файлы
+    - name: 💾 Commit and push changes
+      run: |
+        # Настроить git
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Проверить изменения в файлах
+        echo "🔍 Проверяю изменения в файлах..."
+        git status
+        
+        # Проверить конкретные файлы
+        if [[ -n $(git status --porcelain anekdots.txt last_id.txt) ]]; then
+          echo "📝 Обнаружены изменения, сохраняю..."
+          
+          # Показать что изменилось
+          echo "📋 Изменения в anekdots.txt:"
+          git diff anekdots.txt || echo "Нет изменений"
+          
+          echo "📋 Изменения в last_id.txt:"
+          git diff last_id.txt || echo "Нет изменений"
+          
+          # Добавить и закоммитить
+          git add anekdots.txt last_id.txt
+          git commit -m "🤖 Опубликован анекдот [автоматически]"
+          
+          # Запушить изменения
+          git push
+          echo "✅ Изменения успешно сохранены в репозиторий!"
+        else
+          echo "✅ Нет изменений для сохранения"
+        fi
+    
+    # 6. Логирование результата
+    - name: 📊 Log result
+      run: |
+        echo "🎉 Workflow завершен успешно!"
+        echo "🕐 Время завершения: $(date '+%H:%M:%S')"
+        
+        # Показать текущий last_id
+        if [ -f "last_id.txt" ]; then
+          echo "📝 Последний опубликованный ID: $(cat last_id.txt)"
+        fi
