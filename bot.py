@@ -5,17 +5,22 @@ from datetime import datetime
 import os
 import sys
 
-# Получаем секреты
-BOT_TOKEN = os.environ['BOT_TOKEN']
-CHANNEL_ID = os.environ['CHANNEL_ID']
-MY_CHAT_ID = os.environ.get('MY_CHAT_ID', '')
+# ============================================
+# ВНИМАНИЕ: ТОКЕН БЕРЕТСЯ ИЗ ПЕРЕМЕННЫХ ОКРУЖЕНИЯ!
+# НИКОГДА НЕ ПИШИ ТОКЕН ПРЯМО В КОДЕ!
+# ============================================
+
+# Получаем секреты из переменных окружения GitHub Actions
+BOT_TOKEN = os.environ['BOT_TOKEN']           # ← ИЗ СЕКРЕТОВ GITHUB
+CHANNEL_ID = os.environ['CHANNEL_ID']         # ← ИЗ СЕКРЕТОВ GITHUB
+MY_CHAT_ID = os.environ.get('MY_CHAT_ID', '') # ← ИЗ СЕКРЕТОВ GITHUB (опционально)
 
 async def send_telegram_notification(message):
     """Отправляет уведомление в личный Telegram"""
     if not MY_CHAT_ID:
         return False
     try:
-        bot = Bot(token=BOT_TOKEN)
+        bot = Bot(token=BOT_TOKEN)  # ← ИСПОЛЬЗУЕМ ТОКЕН ИЗ ПЕРЕМЕННОЙ
         await bot.send_message(chat_id=MY_CHAT_ID, text=message)
         return True
     except Exception as e:
@@ -51,7 +56,7 @@ async def post_anekdot():
                 
                 # Публикуем анекдот в канал
                 print(f"📤 Публикую анекдот #{i+1}...")
-                bot = Bot(token=BOT_TOKEN)
+                bot = Bot(token=BOT_TOKEN)  # ← ИСПОЛЬЗУЕМ ТОКЕН ИЗ ПЕРЕМЕННОЙ
                 
                 # Отправляем просто текст анекдота
                 await bot.send_message(chat_id=CHANNEL_ID, text=joke)
