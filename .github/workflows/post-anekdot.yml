@@ -1,60 +1,64 @@
-name: Publish Daily Joke
+name: 🤖 Publish Anekdot
 
 on:
-  # Триггер для ручного запуска (это важно!)
+  # 👇 ЭТА СТРОКА ДАЁТ КНОПКУ "RUN WORKFLOW"!
   workflow_dispatch:
     inputs:
-      manual_trigger:
-        description: 'Ручной запуск публикации анекдота'
+      note:
+        description: 'Комментарий к запуску'
         required: false
-        default: 'manual'
+        default: 'Ручной запуск'
   
   # Автоматический запуск каждый день в 12:00 UTC (15:00 МСК)
   schedule:
     - cron: '0 12 * * *'
 
 jobs:
-  publish-joke:
+  publish-anekdot:
     runs-on: ubuntu-latest
     
     steps:
-    # 1. Получаем код из репозитория
-    - name: 📥 Checkout repository
+    # 1. Получить код из репозитория
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
     
-    # 2. Устанавливаем Python
-    - name: 🐍 Set up Python
+    # 2. Установить Python
+    - name: 🐍 Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
-    # 3. Устанавливаем зависимости
+    # 3. Установить библиотеки
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install python-telegram-bot
     
-    # 4. Запускаем бота
+    # 4. Запустить бота
     - name: 🤖 Run Telegram Bot
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}
       run: |
-        echo "Начинаю публикацию анекдота..."
+        echo "🚀 Запускаю Telegram бота..."
+        echo "📅 Дата: $(date '+%d.%m.%Y %H:%M МСК')"
         python bot.py
     
-    # 5. Коммитим изменения (если бот изменил файл анекдотов)
-    - name: 💾 Commit and push changes
+    # 5. Сохранить изменения (если бот обновил файлы)
+    - name: 💾 Commit changes if needed
       run: |
+        # Настроить git
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-        # Проверяем есть ли изменения
+        # Проверить есть ли изменения
         if git diff --quiet; then
-          echo "Нет изменений для коммита"
+          echo "✅ Нет изменений для сохранения"
         else
-          git add anekdots.txt published.json
-          git commit -m "🤖 Опубликован очередной анекдот [skip ci]"
+          echo "📝 Сохраняю изменения..."
+          git add .
+          git commit -m "🤖 Опубликован анекдот [автоматически]"
           git push
+          echo "✅ Изменения сохранены!"
         fi
