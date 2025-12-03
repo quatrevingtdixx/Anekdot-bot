@@ -3,59 +3,47 @@ name: Post Anekdot
 on:
   schedule:
     # ============================================
-    # РАСПИСАНИЕ ПУБЛИКАЦИЙ
-    # UTC время (Москва = UTC+3)
+    # РАСПИСАНИЕ: UTC время (Москва = UTC+3)
     # ============================================
     
-    # БУДНИ (понедельник-пятница)
+    # БУДНИ (пн-пт)
     # 08:00 МСК = 05:00 UTC
     - cron: '0 5 * * 1-5'
     
     # 13:00 МСК = 10:00 UTC  
     - cron: '0 10 * * 1-5'
     
-    # 21:00 МСК = 18:00 UTC
-    - cron: '0 18 * * 1-5'
+    # 20:00 МСК = 17:00 UTC  ← ИЗМЕНИЛА 21:00 на 20:00 по твоему запросу
+    - cron: '0 17 * * 1-5'
     
-    # ВЫХОДНЫЕ (суббота-воскресенье)
+    # ВЫХОДНЫЕ (сб-вс)
     # 10:00 МСК = 07:00 UTC
     - cron: '0 7 * * 0,6'
     
     # 14:00 МСК = 11:00 UTC
     - cron: '0 11 * * 0,6'
     
-    # 20:00 МСК = 17:00 UTC
-    - cron: '0 17 * * 0,6'
+    # 21:00 МСК = 18:00 UTC
+    - cron: '0 18 * * 0,6'
     
-    # ============================================
-    # ДЛЯ ТЕСТА (раскомментируй если нужно)
-    # - cron: '*/30 * * * *'  # Каждые 30 минут
-    # ============================================
-    
-  workflow_dispatch:  # Разрешить ручной запуск
+  workflow_dispatch:
 
 jobs:
   post:
     runs-on: ubuntu-latest
     
     steps:
-    # 1. Скачиваем код
     - name: Checkout code
       uses: actions/checkout@v3
     
-    # 2. Устанавливаем Python
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     
-    # 3. Устанавливаем зависимости
     - name: Install dependencies
-      run: |
-        pip install python-telegram-bot pandas
-        echo "✅ Зависимости установлены"
+      run: pip install python-telegram-bot pandas
     
-    # 4. Запускаем бота
     - name: Run Telegram Bot
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
