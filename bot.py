@@ -15,9 +15,9 @@ BOT_TOKEN = os.environ.get('BOT_TOKEN') or os.environ.get('BOI_TOKEN', '')
 CHANNEL_ID = os.environ.get('CHANNEL_ID', '')
 MY_CHAT_ID = os.environ.get('MY_CHAT_ID', '')
 
-# Имя файла с анекдотами (теперь TXT формат)
+# Имя файла с анекдотами (TXT формат)
 JOKES_FILE = 'anekdots.txt'
-PUBLISHED_FILE = 'published.json'  # Для хранения состояния
+PUBLISHED_FILE = 'published.json'
 
 async def send_telegram_notification(message):
     """Отправляет уведомление в личный Telegram"""
@@ -265,3 +265,21 @@ if __name__ == "__main__":
     Exit code 1 только при реальных ошибках.
     """
     try:
+        # Запускаем асинхронную функцию
+        success, message = asyncio.run(main())
+        
+        # Определяем exit code
+        if success:
+            print("🎯 Бот успешно завершил работу")
+            sys.exit(0)  # Успешное завершение
+        else:
+            print("💥 Бот завершился с ошибкой")
+            sys.exit(1)  # Ошибка
+            
+    except KeyboardInterrupt:
+        print("\n\n⏹ Бот остановлен пользователем")
+        sys.exit(0)  # Корректное завершение по Ctrl+C
+        
+    except Exception as e:
+        print(f"\n\n💥 Критическая ошибка при запуске: {e}")
+        sys.exit(1)  # Критическая ошибка
