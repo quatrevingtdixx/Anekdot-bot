@@ -2,15 +2,24 @@ name: 🤖 Publish Anekdot
 
 on:
   workflow_dispatch:
+
   schedule:
-    - cron: '0 12 * * *'   # каждый день в 12:00 UTC
+    # --- Будни (Пн–Пт) по Москве ---
+    - cron: "0 5 * * 1-5"   # 08:00 МСК
+    - cron: "0 10 * * 1-5"  # 13:00 МСК
+    - cron: "0 17 * * 1-5"  # 20:00 МСК
+
+    # --- Выходные (Сб–Вс) по Москве ---
+    - cron: "0 7 * * 6,0"   # 10:00 МСК
+    - cron: "0 11 * * 6,0"  # 14:00 МСК
+    - cron: "0 18 * * 6,0"  # 21:00 МСК
 
 jobs:
   publish:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write   # разрешаем workflow пушить в репозиторий
+      contents: write
 
     steps:
     - name: 📥 Checkout repository
@@ -30,6 +39,7 @@ jobs:
       env:
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+        ADMIN_ID: ${{ secrets.ADMIN_ID }}
       run: python bot.py
 
     - name: 💾 Commit updated files
